@@ -1,0 +1,52 @@
+version: '3'
+
+services:
+  # Monitoring server
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9999:9090"
+    volumes:
+      - ./data/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  # Monitoring node service
+  node-exporter:
+    image: prom/node-exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - --collector.filesystem.ignored-mount-points
+      - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
+      - '--collector.textfile.directory=/etc/node-exporter/'
+      - '--collector.conntrack'
+      - "--collector.diskstats"
+      - "--collector.entropy"
+      - "--collector.filefd"
+      - "--collector.systemd"
+      - "--collector.processes"
+      - "--collector.filesystem"
+      - "--collector.loadavg"
+      - "--collector.mdadm"
+      - "--collector.meminfo"
+      - "--collector.netdev"
+      - "--collector.netstat"
+      - "--collector.stat"
+      - "--collector.textfile"
+      - "--collector.time"
+      - "--collector.vmstat"
+      - "--collector.ipvs"
+    ports:
+      - 9100:9100
+
+  # Dashboards
+  grafana:
+    image: grafana/grafana:7.2.0
+    ports:
+      - 3000:3000
+    volumes:
+      - ./data/grafana:/var/lib/grafana
+    user: "1000" # current user
