@@ -1,13 +1,22 @@
 version: '3'
 
+networks:
+  traefik:
+  internal:
+
 services:
   # Monitoring server
   prometheus:
     image: prom/prometheus
-    ports:
-      - "9999:9090"
+    expose:
+      - 9090
     volumes:
-      - ./data/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./conf/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    labels:
+      - traefik.http.routers.prometheus.rule=Host(`prometheus.lan`)
+      - traefik.entryPoints.prometheus.address=9090
+    networks:
+      - traefik
 
   # Monitoring node service
   node-exporter:
@@ -39,14 +48,39 @@ services:
       - "--collector.time"
       - "--collector.vmstat"
       - "--collector.ipvs"
-    ports:
-      - 9100:9100
+    labels:
+      - traefik.enable=false
+    networks:
+      - traefik
 
   # Dashboards
   grafana:
     image: grafana/grafana:7.2.0
-    ports:
-      - 3000:3000
+    expose:
+      - 3000
     volumes:
       - ./data/grafana:/var/lib/grafana
     user: "1000" # current user
+    labels:
+      - traefik.http.routers.grafana.rule=Host(`grafana.lan`)
+    networks:
+      - traefik
+
+  reverse-proxy:
+    # The official v2 Traefik docker image
+    image: traefik:v2.3
+    # Enables the web UI and tells Traefik to listen to docker
+    command: --api.insecure=true --providers.docker
+    ports:
+      # The HTTP port
+      - "80:80"
+      # The Web UI (enabled by --api.insecure=true)
+      - "8181:8080"
+      # HTTPS
+      - "443"
+    volumes:
+      # So that Traefik can listen to the Docker events
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - traefik
+

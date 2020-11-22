@@ -1,3 +1,5 @@
 .idea
 .env
 
+# Ignore data folder
+data
